@@ -1,28 +1,19 @@
 {
   "expo": {
-    "name": "my-expo-app",
-    "slug": "my-expo-app",
+    "name": "todo",
+    "slug": "todo",
     "version": "1.0.0",
-    
-    
-      "web": {
-        "favicon": "./assets/icons/icon.png",
-         "bundler": "metro"
-      },
-      
-        "experiments": {
-          "tsconfigPaths": true
-        },
-      
-      "plugins": [
-        
-      ],
-    
+    "web": {
+      "favicon": "./assets/icons/icon.png",
+      "bundler": "metro"
+    },
+    "experiments": {
+      "tsconfigPaths": true
+    },
+    "plugins": [],
     "orientation": "portrait",
     "icon": "./assets/icons/icon.png",
-    
-     "userInterfaceStyle": "light",
-    
+    "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/icons/logo.png",
       "resizeMode": "contain",
@@ -38,6 +29,12 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/icons/icon.png",
         "backgroundColor": "#ffffff"
+      },
+      "package": "com.fortstar.todo"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "4433a5d2-89ea-46d9-be7d-c29215a3fb5d"
       }
     }
   }

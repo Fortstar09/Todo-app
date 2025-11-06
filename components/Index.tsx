@@ -1,7 +1,9 @@
 import { icons } from 'constants/icons';
 import { images } from 'constants/images';
-import { addTodo, deleteTodo, getTodos, toggleTodo } from 'lib/todoApi';
-import { useEffect, useState } from 'react';
+import { api } from 'convex/_generated/api';
+import { Id } from 'convex/_generated/dataModel';
+import { useMutation, useQuery } from 'convex/react';
+import { useState } from 'react';
 import {
   Alert,
   Image,
@@ -14,99 +16,93 @@ import {
 } from 'react-native';
 
 interface TodoProp {
-  id: string;
+  id:  Id<'todos'>;
   text: string;
   completed: boolean;
 }
 
-type FilterType = "All" | "Active" | "Completed";
+type FilterType = 'All' | 'Active' | 'Completed';
 
 export default function Index() {
-  const [todos, setTodos] = useState<TodoProp[]>([]);
-  const [text, setText] = useState("");
+  const [text, setText] = useState('');
   const [completed, setCompleted] = useState(false);
-  const [filter, setFilter] = useState<FilterType>("All");
-  const [darkMode, setDarkMode] = useState(false);
+  const [filter, setFilter] = useState<FilterType>('All');
+  const [darkMode, setDarkMode] = useState(false); // 🟢 NEW: dark mode state
 
-  // 🟢 Fetch all todos
-  const fetchTodos = async () => {
-    try {
-      const data = await getTodos();
-    
-      setTodos(data);
-    } catch (error) {
-      console.log(error);
-      Alert.alert("Error", String(error));
-    }
-  };
+  // 🔹 Fetch todos from backend
+  const allTodos = useQuery(api.todo.getTodos) || [];
 
-  useEffect(() => {
-    fetchTodos();
-  }, []);
+  // 🔹 Define mutations
+  const addTodo = useMutation(api.todo.addTodo);
+  const toggleTodoMutation = useMutation(api.todo.toggleTodo);
+  const deleteTodoMutation = useMutation(api.todo.deleteTodo);
 
+  // 🟢 Add a new todo
   // 🟢 Add a new todo
   const handleAddTodo = async () => {
     if (!text.trim()) return;
     try {
-      await addTodo(text, completed);
-      setText("");
+      await addTodo({ text, completed });
+      setText('');
       setCompleted(false);
-      await fetchTodos();
     } catch (error) {
-      console.log(error);
-
-      Alert.alert("Error", "Failed to add todo.");
+      console.log(String(error));
+      Alert.alert('Error', 'Failed to add todo. Check internet connection.');
     }
   };
 
   // 🟢 Toggle completion
-  const handleToggleTodo = async (id: string) => {
+  const toggleTodo = async (id: Id<'todos'>) => {
     try {
-      await toggleTodo(id);
-      await fetchTodos();
+      await toggleTodoMutation({ id });
     } catch (error) {
-      console.log(error);
+      console.log(String(error));
 
-      Alert.alert("Error", "Failed to toggle todo.");
+      Alert.alert('Error', 'Failed to toggle todo.');
     }
   };
 
-  // 🟢 Delete a todo
-  const handleDeleteTodo = async (id: string) => {
+  // 🟢 Delete todo
+  const deleteTodo = async (id: Id<'todos'>) => {
+    console.log(id);
     try {
-      await deleteTodo(id);
-      await fetchTodos();
+      await deleteTodoMutation({ id });
     } catch (error) {
+      console.log(String(error));
 
-      console.log(error);
-      Alert.alert("Error", "Failed to delete todo.");
+      Alert.alert('Error', 'Failed to delete todo.');
     }
   };
 
-  // 🟢 Clear completed todos
   const clearCompleted = async () => {
     try {
-      const completedIds = todos.filter((t) => t.completed).map((t) => t.id);
-      await Promise.all(completedIds.map((id) => deleteTodo(id)));
-      await fetchTodos();
-    } catch (error) {
-      Alert.alert("Error", "Failed to clear completed todos.");
+      // Collect completed IDs from current todos (server or local)
+      const completedIds = allTodos.filter((t) => t.completed).map((t) => t._id) as (
+        | string
+        | Id<'todos'>
+      )[];
+
+      // Run deletions in parallel
+      await Promise.all(completedIds.map((id) => deleteTodoMutation({ id: id as Id<'todos'> })));
+    } catch (err) {
+      console.log(String(err));
+      Alert.alert('Error', 'Failed to clear completed todos.');
     }
   };
 
   // 🟢 Filtered list
-  const filteredTodos = todos.filter((todo) => {
-    if (filter === "Active") return !todo.completed;
-    if (filter === "Completed") return todo.completed;
+  const filteredTodos = allTodos.filter((todo) => {
+    if (filter === 'Active') return !todo.completed;
+    if (filter === 'Completed') return todo.completed;
     return true;
   });
 
-  const itemsLeft = todos.filter((todo) => !todo.completed).length;
+  const itemsLeft = allTodos.filter((todo) => !todo.completed).length;
 
-  // 🟢 Theme colors
-  const bgColor = darkMode ? "#171823" : "#FAFAFA";
-  const textColor = darkMode ? "#C8CBE7" : "#494C6B";
-  const boxColor = darkMode ? "#25273D" : "#FFFFFF";
+  // 🟢 Colors depend on theme
+  const bgColor = darkMode ? '#171823' : '#FAFAFA';
+  const textColor = darkMode ? '#C8CBE7' : '#494C6B';
+  const boxColor = darkMode ? '#25273D' : '#FFFFFF';
 
   return (
     <View className="relative flex-1" style={{ backgroundColor: bgColor }}>
@@ -174,8 +170,8 @@ export default function Index() {
           }}>
           {filteredTodos.map((item) => (
             <EachTodo
-              key={item.id}
-              id={item.id}
+              key={item._id}
+              id={item._id}
               completed={item.completed}
               text={item.text}
               toggleTodo={toggleTodo}
@@ -202,7 +198,7 @@ export default function Index() {
 
         {/* Filters */}
         <View
-          className="mb-10 flex flex-row items-center justify-center gap-[18px] rounded-[5px] py-[15px]"
+          className="mb-10 flex min-h-12 flex-row items-center justify-center gap-[18px] rounded-[5px] py-[15px]"
           style={{ backgroundColor: boxColor }}>
           {['All', 'Active', 'Completed'].map((type) => (
             <TouchableOpacity key={type} onPress={() => setFilter(type as FilterType)}>
@@ -235,8 +231,8 @@ const EachTodo = ({
   deleteTodo,
   darkMode,
 }: TodoProp & {
-  toggleTodo: (id: string) => void;
-  deleteTodo: (id: string) => void;
+  toggleTodo: (id: Id<'todos'>) => void;
+  deleteTodo: (id:Id<'todos'>) => void;
   darkMode: boolean;
 }) => {
   return (
@@ -256,6 +252,7 @@ const EachTodo = ({
           style={{
             color: completed ? '#4D5067' : darkMode ? '#C8CBE7' : '#494C6B',
             textDecorationLine: completed ? 'line-through' : 'none',
+            opacity: completed ? 0.3 :1,
           }}>
           {text}
         </Text>

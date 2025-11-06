@@ -8,7 +8,6 @@
  * @module
  */
 
-import type * as http from "../http.js";
 import type * as todo from "../todo.js";
 
 import type {
@@ -26,7 +25,6 @@ import type {
  * ```
  */
 declare const fullApi: ApiFromModules<{
-  http: typeof http;
   todo: typeof todo;
 }>;
 declare const fullApiWithMounts: typeof fullApi;
